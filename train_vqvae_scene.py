@@ -10,11 +10,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser = pl.Trainer.add_argparse_args(parser)
     parser = VQVAE.add_model_specific_args(parser)
-    parser.add_argument('--data_path', type=str, default='D:\GitHub\VideoGPT\data\dataset')
+    parser.add_argument('--data_path', type=str, default='/home/lambda-save/lakshman_experiments_don\'t_delete/VideoGPT/data/dataset')
     parser.add_argument('--sequence_length', type=int, default=4)
     parser.add_argument('--resolution', type=int, default=120)
-    parser.add_argument('--batch_size', type=int, default=2)
+    parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--num_workers', type=int, default=8)
+    parser.add_argument('--n_labelled', type=int, default=8)
+
     #parser.add_argument('--gpus', type=int, default=1)
 
     args = parser.parse_args()

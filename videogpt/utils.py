@@ -85,3 +85,15 @@ def save_video_grid(video, fname, nrow=None):
     print('saved videos to', fname)
 
 
+def sparse_reconstruction_loss(x_true,x_pred,alpha=1.0,beta=1.0):
+    id_true_nonzeros = (x_true!=0)
+    #l_nonzero = torch.sqrt(((x_true[id_true_nonzeros] - x_pred[id_true_nonzeros])**2)+1e-16)
+    #l_zero = torch.sqrt(((x_true[~id_true_nonzeros] - x_pred[~id_true_nonzeros])**2)+1e-16)
+    l_nonzero = ((x_true[id_true_nonzeros] - x_pred[id_true_nonzeros])**2)
+    l_zero = ((x_true[~id_true_nonzeros] - x_pred[~id_true_nonzeros])**2)
+    l_nonzero  = l_nonzero.mean()
+    l_zero  = l_zero.mean()
+
+    recon_loss = (alpha   * l_nonzero) + (beta   * l_zero)
+
+    return recon_loss

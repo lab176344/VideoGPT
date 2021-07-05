@@ -216,17 +216,17 @@ class VideoData(pl.LightningDataModule):
         return self.val_dataloader()
 
 class SceneDataset(data.Dataset):
-    def __init__(self, data_path, train=True, resolution=120, sequence_length=4, n_labelled=8):
+    def __init__(self, data_path, train=True, resolution=120, sequence_length=4):
         self.resolution = resolution
-        self.n_labelled = n_labelled
+        self.n_labelled = 8
         self.sequence_length = sequence_length
-        target_list = range(n_labelled)
+        target_list = range(8)
         if(train):
-            data1  = io.loadmat(data_path+'\Dataset_check_120.mat')['XTrain1']
-            data2 = io.loadmat(data_path+'\Dataset_check_120.mat')['XTrain2']
-            data3 = io.loadmat(data_path+'\Dataset_check_120.mat')['XTrain3'] 
+            data1  = io.loadmat(data_path+'/Dataset_check_120.mat')['XTrain1']
+            data2 = io.loadmat(data_path+'/Dataset_check_120.mat')['XTrain2']
+            data3 = io.loadmat(data_path+'/Dataset_check_120.mat')['XTrain3'] 
             X_train  = np.concatenate((data1,data2,data3))
-            data_gt = io.loadmat(data_path+'\Dataset_check_120.mat')['yTrain'] 
+            data_gt = io.loadmat(data_path+'/Dataset_check_120.mat')['yTrain'] 
             ind = [i for i in range(len(data_gt)) if data_gt[i] in target_list]
             train_set = X_train[ind]
             data_gt = data_gt[ind].tolist()
@@ -237,8 +237,8 @@ class SceneDataset(data.Dataset):
                         
 
         else:
-            X_test = io.loadmat(data_path+'\Dataset_check_120.mat')['XTest']
-            data_gt = io.loadmat(data_path+'\Dataset_check_120.mat')['yTest']   
+            X_test = io.loadmat(data_path+'/Dataset_check_120.mat')['XTest']
+            data_gt = io.loadmat(data_path+'/Dataset_check_120.mat')['yTest']   
             ind = [i for i in range(len(data_gt)) if data_gt[i] in target_list]
             test_set = X_test[ind]
             data_gt = data_gt[ind].tolist()
@@ -284,9 +284,7 @@ class ScenarioData(pl.LightningDataModule):
 
     def _dataset(self, train):
         Dataset = SceneDataset if osp.isdir(self.hparams.data_path) else HDF5Dataset
-        dataset = Dataset(self.hparams.data_path, train=train, resolution=self.hparams.resolution, 
-                          sequence_length=self.hparams.sequence_length, n_labelled=8 
-                         )
+        dataset = Dataset(self.hparams.data_path, train=train, resolution=self.hparams.resolution, sequence_length=self.hparams.sequence_length) 
         return dataset
 
 

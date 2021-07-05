@@ -10,6 +10,25 @@ import torch.distributed as dist
 
 from .attention import MultiHeadAttention
 from .utils import shift_dim
+from .utils import sparse_reconstruction_loss
+import matplotlib.pyplot as plt
+import gc
+
+def visualize_scenarios(data,string='original'):
+    fig, ax = plt.subplots()   
+
+    for k in range(4):
+        for i in range(data.shape[2]):
+            a = data[k,:,i,:,:]
+            aa = a.reshape((120,120))
+            stdName = string+str(k)+'_' +str(i)+'.png'
+            plt.imshow(aa)
+            plt.savefig(stdName)
+            plt.cla() 
+            plt.clf() 
+            plt.close('all')   
+            gc.collect() 
+    fig.clf()
 
 class VQVAE(pl.LightningModule):
     def __init__(self, args):
@@ -51,13 +70,19 @@ class VQVAE(pl.LightningModule):
         z = self.pre_vq_conv(self.encoder(x))
         vq_output = self.codebook(z)
         x_recon = self.decoder(self.post_vq_conv(vq_output['embeddings']))
-        recon_loss = F.mse_loss(x_recon, x) / 0.06
+        recon_loss = sparse_reconstruction_loss(x_recon, x)# / 0.06
 
         return recon_loss, x_recon, vq_output
 
     def training_step(self, batch, batch_idx):
         x = batch['video']
-        recon_loss, _, vq_output = self.forward(x)
+        recon_loss, x_recon, vq_output = self.forward(x)
+        if batch_idx%1000==0:
+            print(x_recon.shape)
+            x_recon = x_recon.cpu().data.numpy()
+
+            visualize_scenarios(x_recon,'recon')
+
         commitment_loss = vq_output['commitment_loss']
         loss = recon_loss + commitment_loss
         return loss
