@@ -216,7 +216,7 @@ class Encoder(nn.Module):
         self.convs = nn.ModuleList()
         max_ds = n_times_downsample.max()
         for i in range(max_ds):
-            in_channels = 3 if i == 0 else n_hiddens
+            in_channels = 1 if i == 0 else n_hiddens
             stride = tuple([2 if d > 0 else 1 for d in n_times_downsample])
             conv = SamePadConv3d(in_channels, n_hiddens, 4, stride=stride)
             self.convs.append(conv)
@@ -253,7 +253,7 @@ class Decoder(nn.Module):
         max_us = n_times_upsample.max()
         self.convts = nn.ModuleList()
         for i in range(max_us):
-            out_channels = 3 if i == max_us - 1 else n_hiddens
+            out_channels = 1 if i == max_us - 1 else n_hiddens
             us = tuple([2 if d > 0 else 1 for d in n_times_upsample])
             convt = SamePadConvTranspose3d(n_hiddens, out_channels, 4,
                                            stride=us)

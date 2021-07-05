@@ -15,6 +15,9 @@ import torch.nn.functional as F
 import torch.distributed as dist
 from torchvision.datasets.video_utils import VideoClips
 import pytorch_lightning as pl
+import scipy.io as io
+from PIL import Image
+import torchvision.transforms as transforms
 
 
 class VideoDataset(data.Dataset):
@@ -211,3 +214,111 @@ class VideoData(pl.LightningDataModule):
 
     def test_dataloader(self):
         return self.val_dataloader()
+
+class SceneDataset(data.Dataset):
+    def __init__(self, data_path, train=True, resolution=120, sequence_length=4, n_labelled=8):
+        self.resolution = resolution
+        self.n_labelled = n_labelled
+        self.sequence_length = sequence_length
+        target_list = range(n_labelled)
+        if(train):
+            data1  = io.loadmat(data_path+'\Dataset_check_120.mat')['XTrain1']
+            data2 = io.loadmat(data_path+'\Dataset_check_120.mat')['XTrain2']
+            data3 = io.loadmat(data_path+'\Dataset_check_120.mat')['XTrain3'] 
+            X_train  = np.concatenate((data1,data2,data3))
+            data_gt = io.loadmat(data_path+'\Dataset_check_120.mat')['yTrain'] 
+            ind = [i for i in range(len(data_gt)) if data_gt[i] in target_list]
+            train_set = X_train[ind]
+            data_gt = data_gt[ind].tolist()
+            data_gt = np.array(data_gt)
+            data_gt = np.squeeze(data_gt)
+            self.images = train_set                  
+            self.target = torch.from_numpy(data_gt)
+                        
+
+        else:
+            X_test = io.loadmat(data_path+'\Dataset_check_120.mat')['XTest']
+            data_gt = io.loadmat(data_path+'\Dataset_check_120.mat')['yTest']   
+            ind = [i for i in range(len(data_gt)) if data_gt[i] in target_list]
+            test_set = X_test[ind]
+            data_gt = data_gt[ind].tolist()
+            data_gt = np.array(data_gt)
+            data_gt = np.squeeze(data_gt)
+            self.images = test_set                  
+            self.target = torch.from_numpy(data_gt)
+    
+    @property
+    def n_classes(self):
+        return self.n_labelled
+
+    def __len__(self):
+        return len(self.images)    
+    
+    def __getitem__(self, index):
+        resolution = self.resolution
+        trans_clip1 = []
+
+        x = self.images[index]
+        y = self.target[index]
+        for k in range(self.sequence_length):
+            frame = x[:,:,k]*255.0
+            frame = Image.fromarray(frame.astype('uint8'))
+            frame = transforms.ToTensor()(frame)
+            trans_clip1.append(frame)
+        trans_clip1 = torch.stack(trans_clip1).permute([1, 0, 2, 3])
+        return dict(video=trans_clip1, label=y)
+ 
+   
+class ScenarioData(pl.LightningDataModule):
+    
+    def __init__(self,args):
+        super().__init__()
+        self.hparams = args
+        
+
+    @property
+    def n_classes(self):
+        dataset = self._dataset(True)
+        return dataset.n_classes
+
+
+    def _dataset(self, train):
+        Dataset = SceneDataset if osp.isdir(self.hparams.data_path) else HDF5Dataset
+        dataset = Dataset(self.hparams.data_path, train=train, resolution=self.hparams.resolution, 
+                          sequence_length=self.hparams.sequence_length, n_labelled=8 
+                         )
+        return dataset
+
+
+    def _dataloader(self, train):
+        dataset = self._dataset(train)
+        if dist.is_initialized():
+            sampler = data.distributed.DistributedSampler(
+                dataset, num_replicas=dist.get_world_size(), rank=dist.get_rank()
+            )
+        else:
+            sampler = None
+        dataloader = data.DataLoader(
+            dataset,
+            batch_size=self.hparams.batch_size,
+            num_workers=self.hparams.num_workers,
+            pin_memory=True,
+            sampler=sampler,
+            shuffle=sampler is None
+        )
+        return dataloader
+
+    def train_dataloader(self):
+        return self._dataloader(True)
+
+    def val_dataloader(self):
+        return self._dataloader(False)
+
+    def test_dataloader(self):
+        return self.val_dataloader()
+    
+    
+        
+
+
+    
