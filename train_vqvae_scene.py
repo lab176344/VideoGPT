@@ -14,7 +14,7 @@ def main():
     parser.add_argument('--sequence_length', type=int, default=4)
     parser.add_argument('--resolution', type=int, default=120)
     parser.add_argument('--batch_size', type=int, default=2)
-    parser.add_argument('--num_workers', type=int, default=0)
+    parser.add_argument('--num_workers', type=int, default=8)
     #parser.add_argument('--gpus', type=int, default=1)
 
     args = parser.parse_args()
@@ -29,8 +29,8 @@ def main():
     callbacks.append(ModelCheckpoint(monitor='val/recon_loss', mode='min'))
 
     kwargs = dict()
-    #if args.gpus > 1:
-    #    kwargs = dict(distributed_backend='ddp', gpus=args.gpus)
+    if args.gpus > 1:
+        kwargs = dict(distributed_backend='ddp', gpus=args.gpus)
     trainer = pl.Trainer.from_argparse_args(args, callbacks=callbacks,
                                             max_steps=200000,**kwargs)
 
