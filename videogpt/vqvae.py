@@ -29,6 +29,7 @@ def visualize_scenarios(data,string='original'):
             plt.close('all')   
             gc.collect() 
     fig.clf()
+    fig.clear()
 
 class VQVAE(pl.LightningModule):
     def __init__(self, args):
@@ -70,18 +71,22 @@ class VQVAE(pl.LightningModule):
         z = self.pre_vq_conv(self.encoder(x))
         vq_output = self.codebook(z)
         x_recon = self.decoder(self.post_vq_conv(vq_output['embeddings']))
-        recon_loss = sparse_reconstruction_loss(x_recon, x)# / 0.06
+        recon_loss = sparse_reconstruction_loss(x, x_recon)# / 0.06
 
         return recon_loss, x_recon, vq_output
 
     def training_step(self, batch, batch_idx):
         x = batch['video']
         recon_loss, x_recon, vq_output = self.forward(x)
-        if batch_idx%1000==0:
-            print(x_recon.shape)
-            x_recon = x_recon.cpu().data.numpy()
+        # if batch_idx%1000==0 :
+        #     #print(x_recon.shape)
+        #     x_recon = x_recon.cpu().data.numpy()
+        #     x = x.cpu().data.numpy()
+        #     del x_recon
+        #     del x
+        #     visualize_scenarios(x,'original')
 
-            visualize_scenarios(x_recon,'recon')
+        #     visualize_scenarios(x_recon,'recon')
 
         commitment_loss = vq_output['commitment_loss']
         loss = recon_loss + commitment_loss
@@ -95,7 +100,7 @@ class VQVAE(pl.LightningModule):
         self.log('val/commitment_loss', vq_output['commitment_loss'], prog_bar=True)
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=3e-4, betas=(0.9, 0.999))
+        return torch.optim.Adam(self.parameters(), lr=1e-4, betas=(0.9, 0.999))
 
     @staticmethod
     def add_model_specific_args(parent_parser):
